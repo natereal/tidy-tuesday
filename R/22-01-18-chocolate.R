@@ -4,14 +4,71 @@ library(ggforce)
 library(colorspace)
 library(ggblanket)
 
+
+# Functions ----
+add_notches_as_box <- function(plot, nudge = 0, alpha = 0.5) {
+    gg_info <- ggplot2::ggplot_build(plot)$data[[1]]
+
+    plot + ggplot2::geom_rect(data = gg_info, aes(
+        xmin = xmin - nudge, xmax = xmax + nudge,
+        ymin = notchlower, ymax = notchupper
+        #,alpha = 1
+    ), fill = "red", color = "transparent", alpha = alpha)
+}
+
+add_notches_as_lines <- function(plot, alpha = 1, size = 1, color = "red") {
+    gg_info <- ggplot2::ggplot_build(plot)$data[[1]]
+
+    plot + ggplot2::geom_segment(data = gg_info, aes(
+        x = xmin, xend = (xmin + xid) / 2, y = notchupper, yend = middle,
+        alpha = alpha
+    ), colour = color, size = size) +
+        ggplot2::geom_segment(data = gg_info, aes(
+            x = xmin, xend = (xmin + xid) / 2, y = notchlower, yend = middle,
+            alpha = alpha
+        ), colour = color, size = size) +
+        ggplot2::geom_segment(data = gg_info, aes(
+            x = xmax, xend = (xmax + xid) / 2, y = notchupper, yend = middle,
+            alpha = alpha
+        ), colour = color, size = size) +
+        ggplot2::geom_segment(data = gg_info, aes(
+            x = xmax, xend = (xmax + xid) / 2, y = notchlower, yend = middle,
+            alpha = alpha
+        ), colour = color, size = size)
+}
+
+# Load data ----
 tt <- tt_load("2022-01-18")
 
 tt
 
 data <- tt$chocolate
 
+# Data cleaning ----
 data <- data %>%
     mutate(cocoa_percent = as.numeric(str_remove_all(cocoa_percent, "%")))
+
+data <- data %>%
+    mutate(
+        BEANS = if_else(stringr::str_detect(ingredients, "B"), TRUE, FALSE),
+        SUGAR = if_else((stringr::str_detect(ingredients, "S") &
+                             !stringr::str_detect(ingredients, "\\*") &
+                             !stringr::str_detect(ingredients, "\a")), TRUE, FALSE),
+        SWEET = if_else(stringr::str_detect(ingredients, "S\\*"), TRUE, FALSE),
+        COCOA = if_else(stringr::str_detect(ingredients, "C"), TRUE, FALSE),
+        VANILLA = if_else(stringr::str_detect(ingredients, "V"), TRUE, FALSE),
+        LEC = if_else(stringr::str_detect(ingredients, "L"), TRUE, FALSE),
+        SALT = if_else(stringr::str_detect(ingredients, "Sa"), TRUE, FALSE),
+    ) %>%
+    mutate(sweetness = case_when(
+        SUGAR == FALSE & SWEET == FALSE ~ "No Sweetener",
+        SUGAR == TRUE & SWEET == FALSE ~ "Sugar",
+        SUGAR == FALSE & SWEET == TRUE ~ "Other Sweetener"
+    ))
+
+data_no_na <- data %>%
+    drop_na()
+
 
 data %>%
     select(where(is.character)) %>%
@@ -44,26 +101,6 @@ data %>%
     ggplot(aes(x = country_of_bean_origin, y = rating)) +
     geom_boxplot()
 
-data <- data %>%
-    mutate(
-        BEANS = if_else(stringr::str_detect(ingredients, "B"), TRUE, FALSE),
-        SUGAR = if_else((stringr::str_detect(ingredients, "S") &
-                        !stringr::str_detect(ingredients, "\\*") &
-                        !stringr::str_detect(ingredients, "\a")), TRUE, FALSE),
-        SWEET = if_else(stringr::str_detect(ingredients, "S\\*"), TRUE, FALSE),
-        COCOA = if_else(stringr::str_detect(ingredients, "C"), TRUE, FALSE),
-        VANILLA = if_else(stringr::str_detect(ingredients, "V"), TRUE, FALSE),
-        LEC = if_else(stringr::str_detect(ingredients, "L"), TRUE, FALSE),
-        SALT = if_else(stringr::str_detect(ingredients, "Sa"), TRUE, FALSE),
-    ) %>%
-    mutate(sweetness = case_when(
-        SUGAR == FALSE & SWEET == FALSE ~ "NONE",
-        SUGAR == TRUE & SWEET == FALSE ~ "SUGAR",
-        SUGAR == FALSE & SWEET == TRUE ~ "OTHER"
-    ))
-
-data_no_na <- data %>%
-    drop_na()
 
 plot2 <- data_no_na %>%
     ggplot() +
@@ -77,77 +114,21 @@ add_notches_as_box(plot2, alpha = 0.4, nudge = 0)
 
 p1 <- data_no_na %>%
     ggplot() +
-    geom_boxplot(aes(y = rating, x = sweetness))
-
-ggdata <- ggplot_build(p1)$data[[1]]
-
-ALPHA <- 0.5
-SIZE  <- 1
-p1 + geom_segment(data = ggdata, aes(
-        x = xmin, xend = (xmin + xid) / 2, y = notchupper, yend = middle,
-        alpha = ALPHA
-    ), colour = "red", size = SIZE) +
-    geom_segment(data = ggdata, aes(
-        x = xmin, xend = (xmin + xid) / 2, y = notchlower, yend = middle,
-        alpha = ALPHA
-    ), colour = "red", size = SIZE) +
-    geom_segment(data = ggdata, aes(
-        x = xmax, xend = (xmax + xid) / 2, y = notchupper, yend = middle,
-        alpha = ALPHA
-    ), colour = "red", size = SIZE) +
-    geom_segment(data = ggdata, aes(
-        x = xmax, xend = (xmax + xid) / 2, y = notchlower, yend = middle,
-        alpha = ALPHA
-    ), colour = "red", size = SIZE)
-
-nudge <- 0.04
-a <- 0.2
-p1 + geom_rect(data = ggdata, aes(
-        xmin = xmin - nudge, xmax = xmax + nudge,
-        ymin = notchlower, ymax = notchupper
-        #,alpha = 1
-    ), fill = "red", color = "transparent", alpha = a)
-
-add_notches_as_box <- function(plot, nudge = 0, alpha = 0.5) {
-    gg_info <- ggplot2::ggplot_build(plot)$data[[1]]
-
-    plot + ggplot2::geom_rect(data = gg_info, aes(
-        xmin = xmin - nudge, xmax = xmax + nudge,
-        ymin = notchlower, ymax = notchupper
-        #,alpha = 1
-    ), fill = "red", color = "transparent", alpha = alpha)
-}
-
-add_notches_as_lines <- function(plot, alpha = 1, size = 1, color = "red") {
-    gg_info <- ggplot2::ggplot_build(plot)$data[[1]]
-
-    plot + ggplot2::geom_segment(data = gg_info, aes(
-        x = xmin, xend = (xmin + xid) / 2, y = notchupper, yend = middle,
-        alpha = alpha
-    ), colour = color, size = size) +
-    ggplot2::geom_segment(data = gg_info, aes(
-        x = xmin, xend = (xmin + xid) / 2, y = notchlower, yend = middle,
-        alpha = alpha
-    ), colour = color, size = size) +
-    ggplot2::geom_segment(data = gg_info, aes(
-        x = xmax, xend = (xmax + xid) / 2, y = notchupper, yend = middle,
-        alpha = alpha
-    ), colour = color, size = size) +
-    ggplot2::geom_segment(data = gg_info, aes(
-        x = xmax, xend = (xmax + xid) / 2, y = notchlower, yend = middle,
-        alpha = alpha
-    ), colour = color, size = size)
-}
+    geom_boxplot(aes(y = rating, x = sweetness),
+                 labels = c("None" = "NONE",
+                            "Other" = "OTHER",
+                            "Sugar" = "SUGAR"))
 
 add_notches_as_lines(p1)
+
+add_notches_as_box(p1, nudge = 0.04, alpha = 0.2) +
+    theme_minimal()
 
 p <- data_no_na %>%
     ggplot(aes(y = rating, x = sweetness, fill = sweetness)) +
     geom_boxplot() +
     scale_fill_brewer(palette = "Blues") +
     theme_minimal()
-
-
 
 p2 <- data_no_na %>%
     ggplot(aes(y = rating, x = BEANS)) +
@@ -200,7 +181,7 @@ data %>%
  print(n = 22)
 
 data %>%
-    count(ingredients, BEANS, sweetness, COCOA, VANILLA, LEC, SALT) 
+    count(ingredients, BEANS, sweetness, COCOA, VANILLA, LEC, SALT)
 
 data %>%
     select(BEANS, sweetness, COCOA, VANILLA, LEC, SALT) %>%
@@ -208,7 +189,7 @@ data %>%
 
 
 
-  data %>%
+ data %>%
     tidyr::drop_na() %>%
     rename(SWEETNESS = sweetness) %>%
     select(rating, BEANS, SWEETNESS, COCOA, VANILLA, LEC, SALT) %>%
@@ -219,4 +200,4 @@ data %>%
 #' TO DO;
 #' 1. data cleaning at start
 #' 2. put plots in seperate file?
-#' 3. can put process in markdown file 
+#' 3. can put process in markdown file
