@@ -65,9 +65,89 @@ data <- data %>%
 data_no_na <- data %>%
     drop_na()
 
+plot2 <- data_no_na %>%
+    ggplot() +
+    geom_boxplot(
+        aes(y = rating, x = factor(sweetness)),
+        fill = "#85e4ff", colour = "#000000",
+        # varwidth = TRUE,
+        outlier.shape = 21, outlier.size = 3, notch = FALSE)
+
+add_notches_as_box(plot2, alpha = 0.4, nudge = 0)
+
 p1 <- data_no_na %>%
-    ggplot(aes(y = rating, x = sweetness)) +
-    geom_boxplot()
+    ggplot() +
+    geom_boxplot(aes(y = rating, x = sweetness))
+
+ggdata <- ggplot_build(p1)$data[[1]]
+
+ALPHA <- 0.5
+SIZE  <- 1
+p1 + geom_segment(data = ggdata, aes(
+        x = xmin, xend = (xmin + xid) / 2, y = notchupper, yend = middle,
+        alpha = ALPHA
+    ), colour = "red", size = SIZE) +
+    geom_segment(data = ggdata, aes(
+        x = xmin, xend = (xmin + xid) / 2, y = notchlower, yend = middle,
+        alpha = ALPHA
+    ), colour = "red", size = SIZE) +
+    geom_segment(data = ggdata, aes(
+        x = xmax, xend = (xmax + xid) / 2, y = notchupper, yend = middle,
+        alpha = ALPHA
+    ), colour = "red", size = SIZE) +
+    geom_segment(data = ggdata, aes(
+        x = xmax, xend = (xmax + xid) / 2, y = notchlower, yend = middle,
+        alpha = ALPHA
+    ), colour = "red", size = SIZE)
+
+nudge <- 0.04
+a <- 0.2
+p1 + geom_rect(data = ggdata, aes(
+        xmin = xmin - nudge, xmax = xmax + nudge,
+        ymin = notchlower, ymax = notchupper
+        #,alpha = 1
+    ), fill = "red", color = "transparent", alpha = a)
+
+add_notches_as_box <- function(plot, nudge = 0, alpha = 0.5) {
+    gg_info <- ggplot2::ggplot_build(plot)$data[[1]]
+
+    plot + ggplot2::geom_rect(data = gg_info, aes(
+        xmin = xmin - nudge, xmax = xmax + nudge,
+        ymin = notchlower, ymax = notchupper
+        #,alpha = 1
+    ), fill = "red", color = "transparent", alpha = alpha)
+}
+
+add_notches_as_lines <- function(plot, alpha = 1, size = 1, color = "red") {
+    gg_info <- ggplot2::ggplot_build(plot)$data[[1]]
+
+    plot + ggplot2::geom_segment(data = gg_info, aes(
+        x = xmin, xend = (xmin + xid) / 2, y = notchupper, yend = middle,
+        alpha = alpha
+    ), colour = color, size = size) +
+    ggplot2::geom_segment(data = gg_info, aes(
+        x = xmin, xend = (xmin + xid) / 2, y = notchlower, yend = middle,
+        alpha = alpha
+    ), colour = color, size = size) +
+    ggplot2::geom_segment(data = gg_info, aes(
+        x = xmax, xend = (xmax + xid) / 2, y = notchupper, yend = middle,
+        alpha = alpha
+    ), colour = color, size = size) +
+    ggplot2::geom_segment(data = gg_info, aes(
+        x = xmax, xend = (xmax + xid) / 2, y = notchlower, yend = middle,
+        alpha = alpha
+    ), colour = color, size = size)
+}
+
+add_notches_as_lines(p1)
+
+p <- data_no_na %>%
+    ggplot(aes(y = rating, x = sweetness, fill = sweetness)) +
+    geom_boxplot() +
+    scale_fill_brewer(palette = "Blues") +
+    theme_minimal()
+
+
 
 p2 <- data_no_na %>%
     ggplot(aes(y = rating, x = BEANS)) +
@@ -90,6 +170,10 @@ p6 <- data_no_na %>%
     geom_boxplot()
 
 gridExtra::grid.arrange(p1, p2, p3, p4, p5, p6, nrow = 2)
+# Not much info in BEANS, so removing that plot;
+# also not a lot of info in COCOA, and if its removed we will
+# have a nice 2x2 grid
+gridExtra::grid.arrange(p1, p4, p5, p6, nrow = 2)
 
 data_no_na %>%
     ggplot(aes(y = rating, x = sweetness)) +
@@ -104,9 +188,10 @@ data %>%
 
 ggplot(data) +
     geom_boxplot(aes(x = .panel_x, y = .panel_y, group = .panel_x)) +
-    facet_matrix(rows = vars(rating), cols = vars(COCOA, VANILLA))
+    facet_matrix(rows = vars(rating), cols = vars(COCOA, VANILLA, LEC))
 
 data %>%
+    drop_na() %>%
     ggplot(aes(y = rating, x = reorder(reorder(ingredients, rating, FUN = var), rating, FUN = median))) + # nolint
     geom_boxplot()
 
@@ -115,8 +200,7 @@ data %>%
  print(n = 22)
 
 data %>%
-    count(ingredients, BEANS, sweetness, COCOA, VANILLA, LEC, SALT) %>%
-    view
+    count(ingredients, BEANS, sweetness, COCOA, VANILLA, LEC, SALT) 
 
 data %>%
     select(BEANS, sweetness, COCOA, VANILLA, LEC, SALT) %>%
@@ -124,11 +208,15 @@ data %>%
 
 
 
-  data %>% 
+  data %>%
     tidyr::drop_na() %>%
     rename(SWEETNESS = sweetness) %>%
     select(rating, BEANS, SWEETNESS, COCOA, VANILLA, LEC, SALT) %>%
     mutate(across(!rating, .fns = as.character)) %>%
-    pivot_longer(!rating, names_to = "INGR", values_to = "value") %>% 
+    pivot_longer(!rating, names_to = "INGR", values_to = "value") %>%
     gg_boxplot(x = value, y = rating, facet = INGR)
 
+#' TO DO;
+#' 1. data cleaning at start
+#' 2. put plots in seperate file?
+#' 3. can put process in markdown file 
