@@ -126,10 +126,10 @@ add_notches_as_box(plot2, alpha = 0.4, nudge = 0)
 
 p1 <- data_no_na %>%
     ggplot() +
-    geom_boxplot(aes(y = rating, x = sweetness)) +
-    xlab("Type of Sweetener") +
-    ylab("Rating")
-p1
+oxplot(aes(y = rating, x = sweetness),
+                 labels = c("None" = "NONE",
+                            "Other" = "OTHER",
+                            "Sugar" = "SUGAR"))
 
 add_notches_as_lines(p1)
 
