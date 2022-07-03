@@ -2,6 +2,7 @@ library(tidyverse)
 library(tidytuesdayR)
 library(ggforce)
 library(colorspace)
+library(ggblanket)
 
 tt <- tt_load("2022-01-18")
 
@@ -121,4 +122,13 @@ data %>%
     select(BEANS, sweetness, COCOA, VANILLA, LEC, SALT) %>%
     map(~ fct_count(as.factor(.x)))
 
+
+
+  data %>% 
+    tidyr::drop_na() %>%
+    rename(SWEETNESS = sweetness) %>%
+    select(rating, BEANS, SWEETNESS, COCOA, VANILLA, LEC, SALT) %>%
+    mutate(across(!rating, .fns = as.character)) %>%
+    pivot_longer(!rating, names_to = "INGR", values_to = "value") %>% 
+    gg_boxplot(x = value, y = rating, facet = INGR)
 
