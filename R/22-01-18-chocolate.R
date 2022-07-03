@@ -1,5 +1,8 @@
 library(tidyverse)
 library(tidytuesdayR)
+library(ggforce)
+library(colorspace)
+
 tt <- tt_load("2022-01-18")
 
 tt
@@ -58,29 +61,49 @@ data <- data %>%
         SUGAR == FALSE & SWEET == TRUE ~ "OTHER"
     ))
 
-data %>%
+data_no_na <- data %>%
+    drop_na()
+
+p1 <- data_no_na %>%
     ggplot(aes(y = rating, x = sweetness)) +
     geom_boxplot()
 
-data %>%
+p2 <- data_no_na %>%
     ggplot(aes(y = rating, x = BEANS)) +
     geom_boxplot()
 
-data %>%
+p3 <- data_no_na %>%
     ggplot(aes(y = rating, x = COCOA)) +
     geom_boxplot()
 
-data %>%
+p4 <- data_no_na %>%
     ggplot(aes(y = rating, x = VANILLA)) +
     geom_boxplot()
 
-data %>%
+p5 <- data_no_na %>%
     ggplot(aes(y = rating, x = LEC)) +
     geom_boxplot()
 
-data %>%
+p6 <- data_no_na %>%
     ggplot(aes(y = rating, x = SALT)) +
     geom_boxplot()
+
+gridExtra::grid.arrange(p1, p2, p3, p4, p5, p6, nrow = 2)
+
+data_no_na %>%
+    ggplot(aes(y = rating, x = sweetness)) +
+    geom_boxplot(aes(fill = sweetness)) +
+    scale_fill_discrete_sequential("Peach")
+    theme_bw()
+
+data %>%
+    ggplot(aes(y = rating)) +
+    geom_boxplot(aes(y = .panel_y, x = .panel_x)) +
+    facet_matrix(rows = vars(sweetness, BEANS), cols = vars(rating))
+
+ggplot(data) +
+    geom_boxplot(aes(x = .panel_x, y = .panel_y, group = .panel_x)) +
+    facet_matrix(rows = vars(rating), cols = vars(COCOA, VANILLA))
 
 data %>%
     ggplot(aes(y = rating, x = reorder(reorder(ingredients, rating, FUN = var), rating, FUN = median))) + # nolint
@@ -97,3 +120,5 @@ data %>%
 data %>%
     select(BEANS, sweetness, COCOA, VANILLA, LEC, SALT) %>%
     map(~ fct_count(as.factor(.x)))
+
+
