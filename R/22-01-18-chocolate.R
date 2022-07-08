@@ -4,6 +4,9 @@ library(ggforce)
 library(colorspace)
 library(ggblanket)
 
+#+include=FALSE
+knitr::opts_chunk$set(dpi=300)
+#' Testing how md files created by spinr looks on github
 
 # Functions ----
 add_notches_as_box <- function(plot, nudge = 0, alpha = 0.5) {
@@ -206,7 +209,7 @@ gridExtra::grid.arrange(p1, p2, p3, nrow = 1, ncol = 3)
 data_no_na %>%
     ggplot(aes(y = rating, x = sweetness)) +
     geom_boxplot(aes(fill = sweetness)) +
-    scale_fill_discrete_sequential("Peach")
+    scale_fill_discrete_sequential("Peach") +
     theme_bw()
 
 data %>%
@@ -252,7 +255,7 @@ ggplot2::ggsave(filename = paste0(path, "ingredients.pdf"), plot = pl3)
 
 for(name in c("cocoa", "sweetness", "ingredients")) {
     pdftools::pdf_convert(
-        pdf = glue::glue("{path}{name}.pdf"), 
+        pdf = glue::glue("{path}{name}.pdf"),
         filenames = glue::glue("{path}{name}.png"),
         format = "png", dpi = 450)
 }
